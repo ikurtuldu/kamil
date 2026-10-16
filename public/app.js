@@ -2,7 +2,7 @@ const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>
 const language=location.pathname==='/tr'||location.pathname.startsWith('/tr/')||new URLSearchParams(location.search).get('lang')==='tr'?'tr':'de',isTr=language==='tr',isCatalog=location.pathname.includes('katalog'),preview=new URLSearchParams(location.search).has('preview');
 const localPath=p=>{if(!p.startsWith('/'))return p;let path=p.replace(/^\/index\.html/,'/').replace(/^\/katalog(?:\.html)?(?=[?#]|$)/,'/katalog');if(isTr){if(path==='/')path='/tr';else if(path==='/katalog')path='/tr/katalog';else if(!path.startsWith('/tr/'))path='/tr'+path}return path};
 const href=p=>localPath(p)+(preview?(p.includes('?')?'&':'?')+'preview=1':'');
-const link=(url)=>{try{if(/^\/(?!\/)/.test(url))return esc(localPath(url));if(/^#[\w-]+$/.test(url))return esc(url);const u=new URL(url);return ['http:','https:'].includes(u.protocol)?esc(url):'#'}catch{return '#'}};
+const link=(url)=>{try{if(/^\/(?:images|media|fonts)\//.test(url))return esc(url);if(/^\/(?!\/)/.test(url))return esc(localPath(url));if(/^#[\w-]+$/.test(url))return esc(url);const u=new URL(url);return ['http:','https:'].includes(u.protocol)?esc(url):'#'}catch{return '#'}};
 const photo=(url,alt,extra='')=>url?`<img src="${link(url)}" alt="${esc(alt)}" ${extra}>`:'';
 async function start(){
  const {legalLinks}=await import('/legal.mjs');
