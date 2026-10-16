@@ -1,0 +1,5 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+test('Vercel package uses standard Next.js build and native dependencies',async()=>{const p=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));assert.ok(p.scripts.build.startsWith('next build'));assert.ok(p.dependencies.mysql2);assert.ok(p.dependencies['@vercel/blob']);assert.ok(!p.dependencies.vinext)});
+test('runtime source has no Cloudflare or hosted ChatGPT identity dependencies',async()=>{async function files(path){const out=[];for(const item of await readdir(path,{withFileTypes:true})){const target=new URL(item.name+(item.isDirectory()?'/':''),path);if(item.isDirectory())out.push(...await files(target));else if(/\.(ts|tsx|mjs)$/.test(item.name))out.push(target)}return out}for(const folder of ['app/','lib/','db/'])for(const file of await files(new URL('../'+folder,import.meta.url))){const s=await readFile(file,'utf8');assert.doesNotMatch(s,/cloudflare:workers|oai-authenticated-user|signin-with-chatgpt|MYSQL_API_URL/,String(file))}});

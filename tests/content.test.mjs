@@ -1,0 +1,15 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {defaults,validateContent,safeUrl} from '../lib/content.mjs';
+test('initial content is valid and strips unknown fields',()=>{assert.deepEqual(validateContent({...structuredClone(defaults),admin:true}),defaults)});
+test('rejects active URL schemes and protocol-relative paths',()=>{for(const value of ['javascript:alert(1)','data:text/html,test','//evil.test','/\\evil.test','https://user:password@host.test'])assert.equal(safeUrl(value),false)});
+test('allows regular external links, internal paths and anchors',()=>{for(const value of ['https://example.com/shop','/katalog','#kontakt',''])assert.equal(safeUrl(value),true)});
+test('rejects unsafe image and shop sources',()=>{for(const change of [d=>d.hero.image='javascript:alert(1)',d=>d.shops.items[0].url='data:text/html,test']){const d=structuredClone(defaults);change(d);assert.throws(()=>validateContent(d))}});
+test('rejects missing fields and wrong types',()=>{const d=structuredClone(defaults);delete d.settings;assert.throws(()=>validateContent(d));const p=structuredClone(defaults);p.products[0].visible='true';assert.throws(()=>validateContent(p))});
+test('rejects duplicate product identities',()=>{const d=structuredClone(defaults);d.products[1].id=d.products[0].id;assert.throws(()=>validateContent(d))});
+test('rejects deleted categories still referenced by products',()=>{const d=structuredClone(defaults);d.catalog.categories=[];assert.throws(()=>validateContent(d))});
+test('accepts adding, hiding and ordering products',()=>{const d=structuredClone(defaults);d.products[0].visible=false;d.products.unshift({...d.products[1],id:'unique-new-item'});assert.equal(validateContent(d).products[0].id,'unique-new-item')});
+test('rejects malformed color, email and language settings',()=>{for(const [k,v]of [['primaryColor','red;display:none'],['email','x@bad\nBcc:bad'],['language','<script>']]){const d=structuredClone(defaults);d.settings[k]=v;assert.throws(()=>validateContent(d))}});
+test('plain text markup stays plain content for escaped rendering',()=>{const d=structuredClone(defaults);d.hero.title='<img src=x onerror=alert(1)>';assert.equal(validateContent(d).hero.title,d.hero.title)});
+test('empty product list and optional contact info are supported',()=>{const d=structuredClone(defaults);d.products=[];assert.deepEqual(validateContent(d).products,[])});
+test('rejects excessive lists and oversized fields',()=>{const d=structuredClone(defaults);d.products=Array.from({length:201},(_,i)=>({...defaults.products[0],id:String(i)}));assert.throws(()=>validateContent(d));const t=structuredClone(defaults);t.legal.imprint='a'.repeat(20001);assert.throws(()=>validateContent(t))});

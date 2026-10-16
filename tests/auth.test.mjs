@@ -1,0 +1,12 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {hashPassword,verifyPassword,validPasswordHash,createSession,verifySession,SESSION_SECONDS} from '../lib/auth-crypto.mjs';
+const password='temporary-test-password-31415';
+const hash=await hashPassword(password);
+const config={email:'admin@example.test',passwordHash:hash,secret:'test-only-secret-with-more-than-thirty-two-characters'};
+test('passwords use salted scrypt and do not contain the plaintext',async()=>{assert.ok(validPasswordHash(hash));assert.ok(!hash.includes(password));assert.ok(await verifyPassword(password,hash));assert.ok(!await verifyPassword('wrong-password',hash));assert.notEqual(await hashPassword(password),hash)});
+test('malformed password hashes and excessive input fail closed',async()=>{assert.ok(!await verifyPassword(password,'plain-text-password'));assert.ok(!await verifyPassword('x'.repeat(1025),hash));await assert.rejects(hashPassword('short'))});
+test('signed sessions carry only the configured administrator identity',()=>{const token=createSession(config,1000);assert.equal(verifySession(token,config,1001).email,config.email);assert.notEqual(createSession(config,1000),token)});
+test('tampered, malformed, expired and future sessions are rejected',()=>{const token=createSession(config,1000);const [v,body,sig]=token.split('.');assert.equal(verifySession(v+'.'+body+'x.'+sig,config,1001),null);assert.equal(verifySession(token+'.extra',config,1001),null);assert.equal(verifySession(token,config,1000+SESSION_SECONDS),null);assert.equal(verifySession(token,config,900),null);assert.equal(verifySession('junk',config),null)});
+test('password, administrator and signing-key rotations invalidate old sessions',()=>{const token=createSession(config,1000);for(const changed of [{...config,passwordHash:hash+'x'},{...config,email:'other@example.test'},{...config,secret:'another-secret-that-has-at-least-thirty-two-chars'}])assert.equal(verifySession(token,changed,1001),null)});
+test('missing or short signing secrets cannot authenticate',()=>{assert.throws(()=>createSession({...config,secret:'short'}));assert.equal(verifySession(createSession(config),{...config,secret:''}),null)});
