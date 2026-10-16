@@ -17,6 +17,7 @@ export function localizeContent(content,language='de'){
  const out=structuredClone(content);
  function merge(dst,src){for(const [k,v]of Object.entries(src)){if(v&&typeof v==='object'&&!Array.isArray(v)&&dst[k]&&typeof dst[k]==='object'&&!Array.isArray(dst[k]))merge(dst[k],v);else dst[k]=v}}
  merge(out,tr);
+ out.services.items=out.services.items.map((item,i)=>({...content.services.items[i],...item}));
  out.settings.language='tr';
  out.legal.disputeText='[Tüketici arabuluculuğuna katılım veya katılma yükümlülüğünü ve varsa yetkili arabuluculuk merkezini § 36 VSBG uyarınca kontrol ederek ekleyin.]';
  const cat=out.catalog;const categoryMap=new Map(content.catalog.categories.map((x,i)=>[x,cat.categories[i]||x]));
